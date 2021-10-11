@@ -4,6 +4,8 @@ import requests
 import logging
 from datetime import datetime
 
+import os
+
 NFL_ODDS_URL = 'https://www.sportsline.com/nfl/odds/money-line/'
 
 def static_vars(**kwargs):
@@ -161,7 +163,8 @@ def run():
     todays_date = today.strftime("%m_%d_%Y_%H_%M")
 
     df = retrieve_game_lines_table()
-    df.to_csv(f'odds_{todays_date}.tsv', sep='\t', index=False)
+    data_path = os.environ['ODDS_PATH']
+    df.to_csv(f'{data_path}/data/odds_{todays_date}.tsv', sep='\t', index=False)
 
 if __name__ == '__main__':
     run()
