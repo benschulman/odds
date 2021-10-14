@@ -4,6 +4,9 @@ import requests
 import logging
 from datetime import datetime
 from util import static_vars
+from typing import OrderedDict
+
+from emailme import construct_email_from_template, send_email, df_to_dct
 
 import os
 
@@ -158,6 +161,22 @@ def run():
 
     df = retrieve_game_lines_table()
     data_path = os.environ['ODDS_PATH']
+    
+    df_tosend = df[["Matchup", "record", "draftkings"]]
+    dct = df_to_dct(df_tosend)
+
+    args = OrderedDict()
+    args["intro"] = "Hello There"
+    args["body"] = "Here is your update"
+    args["conclusion"] = "Goodbye"
+
+    msg = construct_email_from_template(
+        args, "template.html", os.environ['EMAIL'], subject="NFL", table=dct
+    )
+
+    send_email(os.environ['EMAIL'], msg)
+    
+
     df.to_csv(f'{data_path}/data/odds_{todays_date}.tsv', sep='\t', index=False)
 
 if __name__ == '__main__':
