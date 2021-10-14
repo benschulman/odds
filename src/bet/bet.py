@@ -162,7 +162,7 @@ def run():
     df = retrieve_game_lines_table()
     data_path = os.environ['ODDS_PATH']
     
-    df_tosend = df[["Matchup", "record", "draftkings"]]
+    df_tosend = df[["Matchup", "record", "fanduel", "fanduel_open"]]
     dct = df_to_dct(df_tosend)
 
     args = OrderedDict()
