@@ -3,17 +3,11 @@ from bs4 import BeautifulSoup
 import requests
 import logging
 from datetime import datetime
+from util import static_vars
 
 import os
 
 NFL_ODDS_URL = 'https://www.sportsline.com/nfl/odds/money-line/'
-
-def static_vars(**kwargs):
-    def dec(func):
-        for k in kwargs:
-            setattr(func, k, kwargs[k])
-        return func
-    return dec
 
 @static_vars(counter=0)
 def _extract_single_game(game):
