@@ -211,8 +211,9 @@ def run():
         args, "template.html", os.environ['EMAIL'], subject="NFL", table=dct
     )
 
-    to = sys.argv[1]
-    send_email(to, msg)
+    if len(sys.argv) > 1:
+        to = sys.argv[1]
+        send_email(to, msg)
 
     df.to_csv(f'{data_path}/data/odds_{todays_date}.tsv', sep='\t', index=False)
 
