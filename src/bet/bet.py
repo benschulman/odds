@@ -1,4 +1,5 @@
 import pandas as pd
+import sys
 from bs4 import BeautifulSoup
 import requests
 import logging
@@ -202,16 +203,16 @@ def run():
     dct = df_to_dct(df_tosend)
 
     args = OrderedDict()
-    args["intro"] = "Hello There"
-    args["body"] = "Here is your update"
-    args["conclusion"] = "Goodbye"
+    args["intro"] = "Here is your sports update!"
+    #args["body"] = "Here is your update"
+    #args["conclusion"] = "Goodbye"
 
     msg = construct_email_from_template(
         args, "template.html", os.environ['EMAIL'], subject="NFL", table=dct
     )
 
-    send_email(os.environ['EMAIL'], msg)
-    
+    to = sys.argv[1]
+    send_email(to, msg)
 
     df.to_csv(f'{data_path}/data/odds_{todays_date}.tsv', sep='\t', index=False)
 
