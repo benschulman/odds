@@ -10,10 +10,11 @@ from emailme import construct_email_from_template, send_email, df_to_dct
 
 import os
 
-NFL_ODDS_URL = 'https://www.sportsline.com/nfl/odds/money-line/'
+NFL_ODDS_URL_LINE = 'https://www.sportsline.com/nfl/odds/money-line/'
+NFL_ODDS_URL_SPREAD = 'https://www.sportsline.com/nfl/odds/picks-against-the-spread/'
 
 @static_vars(counter=0)
-def _extract_single_game(game):
+def _extract_single_game(game, spread=False):
     _extract_single_game.counter += 1
     
     table_rows = game.find_all('tr')
@@ -71,7 +72,16 @@ def _extract_single_game(game):
                 game_data.append(('', ''))
                 continue
             
-            game_data.append((away_odds_html.text, home_odds_html.text))
+            if spread:
+                away_spread = away_odds_html.find(class_='primary').text
+                away_at = away_odds_html.find(class_='secondary').text
+                
+                home_spread = home_odds_html.find(class_='primary').text
+                home_at = home_odds_html.find(class_='secondary').text
+                
+                game_data.append((f"{away_spread} @ {away_at}", f"{home_spread} @ {home_at}"))
+            else:
+                game_data.append((away_odds_html.text, home_odds_html.text))
             
             # The i == 1 case is a "locked" field for Proj Score
             # All other cases are odds and will have an "open" field
@@ -95,11 +105,18 @@ def _extract_single_game(game):
     
     return game_data
 
-def retrieve_game_lines_table():
-    html = requests.get(NFL_ODDS_URL)
+def retrieve_game_lines_table(spread=False):
+    url = None
+
+    if spread:
+        url = NFL_ODDS_URL_SPREAD
+    else:
+        url = NFL_ODDS_URL_LINE
+    
+    html = requests.get(url)
     
     if html.status_code != 200:
-        logging.error(f'URL: {NFL_ODDS_URL} returned status {html.status_code}')
+        logging.error(f'URL: {url} returned status {html.status_code}')
         raise Exception
     
     soup = BeautifulSoup(html.text, 'lxml')
@@ -130,8 +147,16 @@ def retrieve_game_lines_table():
     
     cols.insert(1, 'record')
     cols.append('date')
-    
+
+    if spread:
+        cols2 = []
+        for col in cols:
+            col += '_spread'
+            cols2.append(col)
+        cols = cols2
+
     logging.info(f'Columns: {cols}')
+    print(cols)
     
     # game_tables will be a list where each element represents a single game's html
     games_tables = table.find_all('tbody')
@@ -144,12 +169,15 @@ def retrieve_game_lines_table():
     #            ...]
     data = []
     for game in games_tables:
-        data.append(_extract_single_game(game))
+        data.append(_extract_single_game(game, spread=spread))
     
     logging.info('Finished Parsing Game Data')
     
     df = pd.DataFrame(data, columns=cols)
-    df.drop(['Proj Score'], axis=1, inplace=True)
+    if spread:
+        df.drop(['Proj Score_spread'], axis=1, inplace=True)
+    else:
+        df.drop(['Proj Score'], axis=1, inplace=True)
     
     return df
 
@@ -159,10 +187,18 @@ def run():
     today = datetime.now()
     todays_date = today.strftime("%m_%d_%Y_%H_%M")
 
-    df = retrieve_game_lines_table()
+    df1 = retrieve_game_lines_table()
+    df2 = retrieve_game_lines_table(spread=True)
+
+    df2['Matchup'] = df2['Matchup_spread']
+    df2.drop(['date_spread', 'record_spread', 'Matchup_spread'], axis=1, inplace=True)
+    
+
+    df = pd.merge(df1, df2, on='Matchup')
+
     data_path = os.environ['ODDS_PATH']
     
-    df_tosend = df[["Matchup", "record", "fanduel", "fanduel_open"]]
+    df_tosend = df[["Matchup", "record", "fanduel", "fanduel_open", 'fanduel_spread', 'fanduel_open_spread']]
     dct = df_to_dct(df_tosend)
 
     args = OrderedDict()
